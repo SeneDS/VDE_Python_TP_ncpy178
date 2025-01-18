@@ -98,6 +98,7 @@ menu = [
     "Supprimer un Contact",
     "Exporter les Contacts",
     "Importer des Contacts",
+     "Quitter l'application",
 ]
 choix = st.sidebar.selectbox("Menu", menu)
 
@@ -181,3 +182,8 @@ elif choix == "Importer des Contacts":
     if fichier_import:
         lignes_ajoutees = gestionnaire.importer_contacts(fichier_import.getvalue())
         st.success(f"{lignes_ajoutees} contacts ajoutés avec succès.")
+
+elif choix ==   "Quitter l'application":
+    st.subheader("Quitter l'application")
+    st.warning("Vous pouvez fermer l'onglet !")
+    st.stop()
