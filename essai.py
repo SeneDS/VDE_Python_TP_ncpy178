@@ -76,21 +76,15 @@ class GestionnaireContact:
                 return contact
         return None
 
-    def modifier_contact(self, email, nom=None, prenom=None, new_email=None, telephone=None):
-        """Modifie un contact existant."""
-        contact = self.rechercher_contact(email)
-        if contact:
-            if nom:
-                contact.nom = nom
-            if prenom:
-                contact.prenom = prenom
-            if new_email:
-                contact.email = new_email
-            if telephone:
-                contact.telephone = telephone
-            self.sauvegarder_contacts()
-            return True
+    def modifier_contact(self, email, nouveau_contact):
+        """Modifie un contact en remplaçant ses informations."""
+        for i, contact in enumerate(self.contacts):
+            if contact.email == email:
+                self.contacts[i] = nouveau_contact
+                self.sauvegarder_contacts()
+                return True
         return False
+
 
     def supprimer_contact(self, email):
         """Supprime un contact par email."""
@@ -117,6 +111,9 @@ class GestionnaireContact:
                     if len(valeurs) == 4:
                         nom, prenom, email, telephone = valeurs
                         self.contacts.append(Contact(nom, prenom, email, telephone))
+
+
+
 
 
 # Application Streamlit
@@ -187,18 +184,19 @@ def main():
     elif choix == "Modifier Contact":
         st.subheader("Modifier un Contact")
         email = st.text_input("Email du contact à modifier")
-        with st.form("modifier_contact"):
-            nom = st.text_input("Nouveau Nom")
-            prenom = st.text_input("Nouveau Prénom")
-            new_email = st.text_input("Nouvel Email")
-            telephone = st.text_input("Nouveau Téléphone")
-            submitted = st.form_submit_button("Modifier")
-
-        if submitted:
-            if gestionnaire.modifier_contact(email, nom, prenom, new_email, telephone):
-                st.success("Contact modifié avec succès.")
-            else:
-                st.warning("Aucun contact trouvé avec cet email.")
+        if st.button("Rechercher pour Modifier"):
+            contact = gestionnaire.rechercher_contact(email)
+            if contact:
+                with st.form("form_modifier"):
+                    nouveau_nom = st.text_input("Nouveau Nom", value=contact.nom)
+                    nouveau_prenom = st.text_input("Nouveau Prénom", value=contact.prenom)
+                    nouvel_email = st.text_input("Nouvel Email", value=contact.email)
+                    nouveau_telephone = st.text_input("Nouveau Téléphone", value=contact.telephone)
+                    submit = st.form_submit_button("Modifier")
+                    if submit:
+                        nouveau_contact = Contact(nouveau_nom, nouveau_prenom, nouvel_email, nouveau_telephone)
+                        gestionnaire.modifier_contact(email, nouveau_contact)
+                        st.success(f"Contact {email} modifié avec succès.")
 
     elif choix == "Supprimer Contact":
         st.subheader("Supprimer un Contact")
