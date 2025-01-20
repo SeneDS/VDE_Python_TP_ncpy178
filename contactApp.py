@@ -1,6 +1,48 @@
-import os
-import pandas as pd
+#=======================================================================================================================
+import firebase_admin
+from firebase_admin import credentials, db
 import streamlit as st
+import pandas as pd
+
+
+"""
+import os
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
+import streamlit as st
+
+# Charger les secrets depuis Streamlit (à configurer dans Streamlit Cloud)
+firebase_config = {
+    "type": os.getenv("FIREBASE_CONFIG_type"),
+    "project_id": os.getenv("FIREBASE_CONFIG_project_id"),
+    "private_key_id": os.getenv("FIREBASE_CONFIG_private_key_id"),
+    "private_key": os.getenv("FIREBASE_CONFIG_private_key").replace("\\n", "\n"),
+    "client_email": os.getenv("FIREBASE_CONFIG_client_email"),
+    "client_id": os.getenv("FIREBASE_CONFIG_client_id"),
+    "auth_uri": os.getenv("FIREBASE_CONFIG_auth_uri"),
+    "token_uri": os.getenv("FIREBASE_CONFIG_token_uri"),
+    "auth_provider_x509_cert_url": os.getenv("FIREBASE_CONFIG_auth_provider_x509_cert_url"),
+    "client_x509_cert_url": os.getenv("FIREBASE_CONFIG_client_x509_cert_url"),
+}
+
+firebase_url = os.getenv("FIREBASE_DATABASE_URL")  # URL de la base de données Firebase
+
+# Vérifier si l'application Firebase est déjà initialisée
+if not firebase_admin._apps:
+    cred = credentials.Certificate(firebase_config)  # Utiliser la configuration reconstituée
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': firebase_url  # URL de la base de données
+    })
+
+"""
+
+# Vérifiersi l'application Firebase est déjà initialisée
+if not firebase_admin._apps:
+    cred = credentials.Certificate("vde-pythondata-9211c-firebase-adminsdk-fbsvc-b1f496b650.json")  # Remplacez par le chemin de votre fichier JSON
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'  # Remplacez par votre URL Firebase
+    })
 
 
 # Classe Contact
@@ -11,128 +53,123 @@ class Contact:
         self.email = email
         self.telephone = telephone
 
-    def __str__(self):
-        return f"Nom: {self.nom}, Prénom: {self.prenom}, Email: {self.email}, Téléphone: {self.telephone}"
+    def to_dict(self):
+        return {
+            "nom": self.nom,
+            "prenom": self.prenom,
+            "email": self.email,
+            "telephone": self.telephone
+        }
 
 
-# Gestionnaire des Contacts
+#Classe  Gestionnaire de Contacts avec Firebase
 class GestionnaireContact:
     def __init__(self):
-        self.contacts = []
-        self.fichier = "contacts.txt"
-        self.charger_contacts()
+        self.ref = db.reference("contacts")
 
     def ajouter_contact(self, contact):
-        """Ajoute un contact s'il n'est pas déjà dans la liste."""
-        if not any(c.email == contact.email for c in self.contacts):
-            self.contacts.append(contact)
-            self.sauvegarder_contacts()
-            return True
-        return False
+        """Ajoute un contact dans Firebase."""
+        contacts = self.ref.order_by_child("email").equal_to(contact.email).get()
+        if contacts:
+            return False  # Contact déjà existant
+        self.ref.push(contact.to_dict())
+        return True
 
-    def importer_contacts(self, fichier_importe):
-        """Importe des contacts depuis un fichier chargé via Streamlit."""
-        try:
-            contenu = fichier_importe.read().decode("utf-8")
-            lignes = contenu.splitlines()
-            lignes_ajoutees = 0
-            for ligne in lignes:
-                valeurs = ligne.strip().split(",")
-                if len(valeurs) == 4:
-                    nom, prenom, email, telephone = valeurs
-                    if self.ajouter_contact(Contact(nom, prenom, email, telephone)):
-                        lignes_ajoutees += 1
-            return lignes_ajoutees
-        except Exception as e:
-            st.error(f"Erreur lors de l'importation : {e}")
-
-    def exporter_contacts(self, chemin_fichier):
-        """Exporte les contacts dans un fichier texte."""
-        try:
-            with open(chemin_fichier, "w") as f:
-                header = f"{'Nom':<20}{'Prénom':<20}{'Email':<30}{'Téléphone':<15}\n"
-                f.write(header)
-                f.write("-" * len(header) + "\n")
-                for contact in self.contacts:
-                    ligne = f"{contact.nom:<20}{contact.prenom:<20}{contact.email:<30}{contact.telephone:<15}\n"
-                    f.write(ligne)
-            return True
-        except Exception as e:
-            st.error(f"Erreur lors de l'exportation : {e}")
-            return False
-
-    def contacts_en_dataframe(self):
-        """Convertit la liste des contacts en DataFrame."""
-        data = [
-            {"Nom": contact.nom, "Prénom": contact.prenom, "Email": contact.email, "Téléphone": contact.telephone}
-            for contact in self.contacts
-        ]
-        return pd.DataFrame(data)
+    def afficher_contacts(self):
+        """Récupère tous les contacts de Firebase."""
+        return self.ref.get()
 
     def rechercher_contact(self, email):
         """Recherche un contact par email."""
-        for contact in self.contacts:
-            if contact.email == email:
-                return contact
-        return None
+        contacts = self.ref.order_by_child("email").equal_to(email).get()
+        return next(iter(contacts.values()), None)
 
     def modifier_contact(self, email, nouveau_contact):
-        """Modifie un contact en remplaçant ses informations."""
-        for i, contact in enumerate(self.contacts):
-            if contact.email == email:
-                self.contacts[i] = nouveau_contact
-                self.sauvegarder_contacts()
-                return True
-        return False
-
+        """Modifie un contact existant."""
+        contacts = self.ref.order_by_child("email").equal_to(email).get()
+        if not contacts:
+            return False
+        contact_key = next(iter(contacts))
+        self.ref.child(contact_key).update(nouveau_contact.to_dict())
+        return True
 
     def supprimer_contact(self, email):
         """Supprime un contact par email."""
-        contact = self.rechercher_contact(email)
-        if contact:
-            self.contacts.remove(contact)
-            self.sauvegarder_contacts()
-            return True
-        return False
+        contacts = self.ref.order_by_child("email").equal_to(email).get()
+        if not contacts:
+            return False
+        contact_key = next(iter(contacts))
+        self.ref.child(contact_key).delete()
+        return True
 
-    def sauvegarder_contacts(self):
-        """Sauvegarde les contacts dans un fichier texte."""
-        with open(self.fichier, "w") as f:
-            for contact in self.contacts:
-                ligne = f"{contact.nom},{contact.prenom},{contact.email},{contact.telephone}\n"
-                f.write(ligne)
+    def importer_contacts(self, fichier_importe):
+        """Importe des contacts depuis un fichier chargé via Streamlit."""
+        lignes_ajoutees = 0
+        try:
+            # Lire le contenu du fichier importé
+            contenu = fichier_importe.read().decode("utf-8")
+            lignes = contenu.splitlines()
 
-    def charger_contacts(self):
-        """Charge les contacts depuis un fichier texte."""
-        if os.path.exists(self.fichier):
-            with open(self.fichier, "r") as f:
-                for ligne in f:
-                    valeurs = ligne.strip().split(",")
-                    if len(valeurs) == 4:
-                        nom, prenom, email, telephone = valeurs
-                        self.contacts.append(Contact(nom, prenom, email, telephone))
+            # Vérifier la structure du fichier
+            if not lignes or len(lignes[0].strip().split(",")) != 4:
+                st.error("Le fichier doit contenir 4 colonnes : Nom, Prénom, Email, Téléphone.")
+                return 0
+
+            for ligne in lignes[1:]:  # Ignore l'en-tête
+                valeurs = ligne.strip().split(",")
+
+                # Vérifier si la ligne contient exactement 4 colonnes
+                if len(valeurs) != 4:
+                    st.warning(f"Ligne ignorée : {ligne} (Format incorrect)")
+                    continue
+
+                nom, prenom, email, telephone = valeurs
+
+                # Vérifier si les champs essentiels sont remplis
+                if not nom or not email or not telephone:
+                    st.warning(f"Ligne ignorée : {ligne} (Nom, Email ou Téléphone manquant)")
+                    continue
+
+                # Ajouter le contact à Firebase
+                contact = Contact(nom, prenom if prenom else "N/A", email, telephone)
+                if self.ajouter_contact(contact):
+                    lignes_ajoutees += 1
+
+            return lignes_ajoutees
+        except Exception as e:
+            st.error(f"Erreur lors de l'importation : {e}")
+            return 0
 
 
+    def exporter_contacts(self):
+        """Génère un contenu CSV pour les contacts."""
+        contacts = self.afficher_contacts()
+        contenu = "Nom,Prénom,Email,Téléphone\n"
+        if contacts:
+            for key, contact in contacts.items():
+                contenu += f"{contact['nom']},{contact['prenom']},{contact['email']},{contact['telephone']}\n"
+        return contenu
 
 
-
-# Application Streamlit
+############################################## Streamlit ##############################################################
 def main():
-    st.title("Gestionnaire de Contacts")
+    st.title("Gestionnaire de Contacts avec Firebase")
     gestionnaire = GestionnaireContact()
 
-    menu = ["Afficher Contacts", "Ajouter Contact", "Importer Contacts", "Exporter Contacts", "Rechercher Contact", "Modifier Contact", "Supprimer Contact", "Quitter"]
+    menu = ["1. Afficher Contacts", "2. Ajouter Contact", "3. Rechercher Contact", "4. Modifier Contact", "5. Supprimer Contact", "6. Importer Contacts", "7. Exporter Contacts",  "8. Quitter"]
     choix = st.sidebar.selectbox("Menu", menu)
 
-    if choix == "Afficher Contacts":
+
+    if choix == "1. Afficher Contacts":
         st.subheader("Liste des Contacts")
-        df = gestionnaire.contacts_en_dataframe()
-        if not df.empty:
+        contacts = gestionnaire.afficher_contacts()
+        if contacts:
+            df = pd.DataFrame(contacts.values())
             st.dataframe(df)
         else:
             st.info("Aucun contact disponible.")
 
-    elif choix == "Ajouter Contact":
+    elif choix == "2. Ajouter Contact":
         st.subheader("Ajouter un Nouveau Contact")
         with st.form("ajout_contact"):
             nom = st.text_input("Nom")
@@ -147,31 +184,11 @@ def main():
                 if gestionnaire.ajouter_contact(contact):
                     st.success(f"Contact {nom} ajouté avec succès.")
                 else:
-                    st.warning(f"Le contact avec l'email {email} existe déjà.")
+                    st.warning("Un contact avec cet email existe déjà.")
             else:
                 st.warning("Veuillez remplir tous les champs.")
 
-    elif choix == "Importer Contacts":
-        st.subheader("Importer Contacts depuis un Fichier")
-        fichier_import = st.file_uploader("Choisissez un fichier CSV ou TXT", type=["txt", "csv"])
-
-        if fichier_import is not None:
-            lignes_ajoutees = gestionnaire.importer_contacts(fichier_import)
-            st.success(f"{lignes_ajoutees} contacts importés avec succès.")
-            df = gestionnaire.contacts_en_dataframe()
-            st.dataframe(df)
-
-    elif choix == "Exporter Contacts":
-        st.subheader("Exporter les Contacts")
-        chemin_fichier = st.text_input("Nom du fichier d'export (ex. export_contacts.txt)")
-        if st.button("Exporter"):
-            if chemin_fichier:
-                if gestionnaire.exporter_contacts(chemin_fichier):
-                    st.success(f"Contacts exportés dans {chemin_fichier} avec succès.")
-            else:
-                st.warning("Veuillez entrer un nom de fichier.")
-
-    elif choix == "Rechercher Contact":
+    elif choix == "3. Rechercher Contact":
         st.subheader("Rechercher un Contact")
         email = st.text_input("Email du contact à rechercher")
         if st.button("Rechercher"):
@@ -181,24 +198,24 @@ def main():
             else:
                 st.warning("Aucun contact trouvé avec cet email.")
 
-    elif choix == "Modifier Contact":
+    elif choix == "4. Modifier Contact":
         st.subheader("Modifier un Contact")
         email = st.text_input("Email du contact à modifier")
         if st.button("Rechercher pour Modifier"):
             contact = gestionnaire.rechercher_contact(email)
             if contact:
                 with st.form("form_modifier"):
-                    nouveau_nom = st.text_input("Nouveau Nom", value=contact.nom)
-                    nouveau_prenom = st.text_input("Nouveau Prénom", value=contact.prenom)
-                    nouvel_email = st.text_input("Nouvel Email", value=contact.email)
-                    nouveau_telephone = st.text_input("Nouveau Téléphone", value=contact.telephone)
+                    nouveau_nom = st.text_input("Nouveau Nom", value=contact["nom"])
+                    nouveau_prenom = st.text_input("Nouveau Prénom", value=contact["prenom"])
+                    nouvel_email = st.text_input("Nouvel Email", value=contact["email"])
+                    nouveau_telephone = st.text_input("Nouveau Téléphone", value=contact["telephone"])
                     submit = st.form_submit_button("Modifier")
                     if submit:
                         nouveau_contact = Contact(nouveau_nom, nouveau_prenom, nouvel_email, nouveau_telephone)
                         gestionnaire.modifier_contact(email, nouveau_contact)
                         st.success(f"Contact {email} modifié avec succès.")
 
-    elif choix == "Supprimer Contact":
+    elif choix == "5. Supprimer Contact":
         st.subheader("Supprimer un Contact")
         email = st.text_input("Email du contact à supprimer")
         if st.button("Supprimer"):
@@ -207,16 +224,80 @@ def main():
             else:
                 st.warning("Aucun contact trouvé avec cet email.")
 
-    elif choix == "Quitter":
+    elif choix == "6. Importer Contacts":
+        st.subheader("Importer Contacts depuis un Fichier")
+        fichier_import = st.file_uploader("Choisissez un fichier CSV ou TXT", type=["txt", "csv"])
+
+        if fichier_import is not None:
+            lignes_ajoutees = gestionnaire.importer_contacts(fichier_import)
+            st.success(f"{lignes_ajoutees} contacts importés avec succès.")
+            contacts = gestionnaire.afficher_contacts()
+            if contacts:
+                df = pd.DataFrame(contacts.values())
+                st.dataframe(df)
+
+
+    elif choix == "7. Exporter Contacts":
+        st.subheader("Exporter les Contacts")
+        contenu = gestionnaire.exporter_contacts()
+        st.download_button(
+            label="Télécharger les Contacts",
+            data=contenu,
+            file_name="contacts_export.csv",
+            mime="text/csv"
+        )
+
+    elif choix == "8. Quitter":
         st.subheader("Quitter l'application")
         st.write("Merci d'avoir utilisé le gestionnaire de contacts. À bientôt !")
-
 
 if __name__ == "__main__":
     main()
 
 
-#=======================================================================================================================
-#Voir le script github pour la recherrche de contact
-#Choix du format d'export et d'import
-#Possibilité de connecter l'application à une base de données.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#import firebase_admin
+#from firebase_admin import credentials
+
+#cred = credentials.Certificate("path/to/serviceAccountKey.json")
+#firebase_admin.initialize_app(cred)
