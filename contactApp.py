@@ -10,7 +10,7 @@ from firebase_admin import db
 
 # Vérifiersi l'application Firebase est déjà initialisée
 if not firebase_admin._apps:
-    cred = credentials.Certificate("vde-pythondata-9211c-firebase-adminsdk-fbsvc-582d1aa1e8.json")  # Chemin du fichier JSON
+    cred = credentials.Certificate('FIREBASE_CREDENTIALS')  # Chemin du fichier JSON
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'
     })
