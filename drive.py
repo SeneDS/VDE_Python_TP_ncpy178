@@ -4,14 +4,46 @@ from firebase_admin import credentials, db
 import streamlit as st
 import pandas as pd
 from firebase_admin import db
+import gdown
+import os
+import firebase_admin
+from firebase_admin import credentials, db
+import requests
+import json
 
+# URL du fichier JSON dans Google Drive
+google_drive_url = "https://drive.google.com/uc?id=1yrNR3kOvAuNt6MWDDU10ltZZ24n-kJ5l"
 
-# Vérifiersi l'application Firebase est déjà initialisée
-if not firebase_admin._apps:
-    cred = credentials.Certificate('vde-pythondata-9211c-firebase-adminsdk-fbsvc-582d1aa1e8.json')  # Chemin du fichier JSON
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'
-    })
+# Fonction pour lire le fichier JSON directement depuis Google Drive
+def read_json_from_google_drive(url):
+    """Lit le contenu d'un fichier JSON hébergé sur Google Drive."""
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Vérifie si la requête a réussi
+        return response.json()  # Renvoie le contenu JSON
+    except Exception as e:
+        print(f"Erreur lors de la récupération du fichier JSON : {e}")
+        raise
+
+# Charger le fichier JSON depuis Google Drive
+try:
+    firebase_credentials = read_json_from_google_drive(google_drive_url)
+    print("Fichier JSON récupéré avec succès.")
+except Exception as e:
+    print(f"Erreur lors du chargement des crédentials : {e}")
+    firebase_credentials = None
+
+# Initialiser Firebase Admin si le fichier JSON a été chargé avec succès
+if firebase_credentials and not firebase_admin._apps:
+    try:
+        cred = credentials.Certificate(firebase_credentials)  # Utiliser les données JSON
+        firebase_admin.initialize_app(cred, {
+            'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'
+        })
+        print("Firebase initialisé avec succès.")
+    except Exception as e:
+        print(f"Erreur lors de l'initialisation de Firebase : {e}")
+
 
 # Classe Contact
 class Contact:
@@ -221,19 +253,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
