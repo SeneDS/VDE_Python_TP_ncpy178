@@ -2,47 +2,29 @@ import firebase_admin
 from firebase_admin import credentials, db
 import streamlit as st
 import pandas as pd
-
-
-"""
-import os
-import firebase_admin
-from firebase_admin import credentials
 from firebase_admin import db
-import streamlit as st
+import os
+import json
+from dotenv import load_dotenv
 
-# Charger les secrets depuis Streamlit (à configurer dans Streamlit Cloud)
-firebase_config = {
-    "type": os.getenv("FIREBASE_CONFIG_type"),
-    "project_id": os.getenv("FIREBASE_CONFIG_project_id"),
-    "private_key_id": os.getenv("FIREBASE_CONFIG_private_key_id"),
-    "private_key": os.getenv("FIREBASE_CONFIG_private_key").replace("\\n", "\n"),
-    "client_email": os.getenv("FIREBASE_CONFIG_client_email"),
-    "client_id": os.getenv("FIREBASE_CONFIG_client_id"),
-    "auth_uri": os.getenv("FIREBASE_CONFIG_auth_uri"),
-    "token_uri": os.getenv("FIREBASE_CONFIG_token_uri"),
-    "auth_provider_x509_cert_url": os.getenv("FIREBASE_CONFIG_auth_provider_x509_cert_url"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CONFIG_client_x509_cert_url"),
-}
 
-firebase_url = os.getenv("FIREBASE_DATABASE_URL")  # URL de la base de données Firebase
-
-# Vérifier si l'application Firebase est déjà initialisée
-if not firebase_admin._apps:
-    cred = credentials.Certificate(firebase_config)  # Utiliser la configuration reconstituée
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': firebase_url  # URL de la base de données
-    })
-
-"""
+#Charger les variables d'environnement
+load_dotenv()
+#Charger les crédentials depuis la variables d'environnement
+firebase_credentials_json=os.getenv("FIREBASE_CREDENTIALS")
+if not firebase_credentials_json:
+    raise EnvironmentError("La variable d'environnement 'FIREBASE_CREDENTIALS' est introuvable.")
+#Convertir la chaine JSON en objet Python
+firebase_credentials=json.loads(firebase_credentials_json)
 
 # Vérifiersi l'application Firebase est déjà initialisée
 if not firebase_admin._apps:
-    cred = credentials.Certificate("vde-pythondata-9211c-firebase-adminsdk-fbsvc-b1f496b650.json")  # Remplacez par le chemin de votre fichier JSON
+    cred = credentials.Certificate(firebase_credentials)  # Chemin du fichier JSON
     firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'  # Remplacez par votre URL Firebase
+        'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'
     })
 
+# Classe Contact
 
 # Classe Contact
 class Contact:
@@ -152,7 +134,7 @@ class GestionnaireContact:
 
 ############################################## Streamlit ##############################################################
 def main():
-    st.title("Gestionnaire de Contacts")
+    st.title("Gestionnaire de Contacts avec Firebase")
     gestionnaire = GestionnaireContact()
 
     menu = ["1. Afficher Contacts", "2. Ajouter Contact", "3. Rechercher Contact", "4. Modifier Contact", "5. Supprimer Contact", "6. Importer Contacts", "7. Exporter Contacts",  "8. Quitter"]
@@ -292,11 +274,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-#import firebase_admin
-#from firebase_admin import credentials
-
-#cred = credentials.Certificate("path/to/serviceAccountKey.json")
-#firebase_admin.initialize_app(cred)

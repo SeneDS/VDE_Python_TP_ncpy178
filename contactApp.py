@@ -5,45 +5,15 @@ import streamlit as st
 import pandas as pd
 
 
-"""
-import os
-import firebase_admin
-from firebase_admin import credentials
 from firebase_admin import db
-import streamlit as st
 
-# Charger les secrets depuis Streamlit (à configurer dans Streamlit Cloud)
-firebase_config = {
-    "type": os.getenv("FIREBASE_CONFIG_type"),
-    "project_id": os.getenv("FIREBASE_CONFIG_project_id"),
-    "private_key_id": os.getenv("FIREBASE_CONFIG_private_key_id"),
-    "private_key": os.getenv("FIREBASE_CONFIG_private_key").replace("\\n", "\n"),
-    "client_email": os.getenv("FIREBASE_CONFIG_client_email"),
-    "client_id": os.getenv("FIREBASE_CONFIG_client_id"),
-    "auth_uri": os.getenv("FIREBASE_CONFIG_auth_uri"),
-    "token_uri": os.getenv("FIREBASE_CONFIG_token_uri"),
-    "auth_provider_x509_cert_url": os.getenv("FIREBASE_CONFIG_auth_provider_x509_cert_url"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CONFIG_client_x509_cert_url"),
-}
-
-firebase_url = os.getenv("FIREBASE_DATABASE_URL")  # URL de la base de données Firebase
-
-# Vérifier si l'application Firebase est déjà initialisée
-if not firebase_admin._apps:
-    cred = credentials.Certificate(firebase_config)  # Utiliser la configuration reconstituée
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': firebase_url  # URL de la base de données
-    })
-
-"""
 
 # Vérifiersi l'application Firebase est déjà initialisée
 if not firebase_admin._apps:
-    cred = credentials.Certificate("vde-pythondata-9211c-firebase-adminsdk-fbsvc-b1f496b650.json")  # Remplacez par le chemin de votre fichier JSON
+    cred = credentials.Certificate("vde-pythondata-9211c-firebase-adminsdk-fbsvc-582d1aa1e8.json")  # Chemin du fichier JSON
     firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'  # Remplacez par votre URL Firebase
+        'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'
     })
-
 
 # Classe Contact
 class Contact:
