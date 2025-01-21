@@ -8,12 +8,34 @@ import pandas as pd
 from firebase_admin import db
 
 
-# Vérifiersi l'application Firebase est déjà initialisée
-if not firebase_admin._apps:
-    cred = credentials.Certificate('FIREBASE_CREDENTIALS')  # Chemin du fichier JSON
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'
-    })
+# Charger les credentials Firebase depuis l'environnement
+firebase_credentials_json = os.getenv("FIREBASE_CREDENTIALS")
+
+if not firebase_credentials_json:
+    raise EnvironmentError("La variable d'environnement 'FIREBASE_CREDENTIALS' est introuvable.")
+
+try:
+    # Convertir la chaîne JSON en dictionnaire Python
+    firebase_credentials = json.loads(firebase_credentials_json)
+    
+    # Restaurer les sauts de ligne dans la clé privée
+    firebase_credentials["private_key"] = firebase_credentials["private_key"].replace("\\n", "\n")
+    
+    # Initialiser Firebase si ce n'est pas déjà fait
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(firebase_credentials)
+        firebase_admin.initialize_app(cred, {
+            'databaseURL': 'https://vde-pythondata-9211c-default-rtdb.europe-west1.firebasedatabase.app/'
+        })
+except json.JSONDecodeError:
+    raise ValueError("Les credentials Firebase sont mal formatés.")
+except Exception as e:
+    raise RuntimeError(f"Erreur lors de l'initialisation de Firebase : {e}")
+
+
+
+
+
 
 # Classe Contact
 class Contact:
