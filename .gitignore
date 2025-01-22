@@ -1,17 +1,22 @@
+# Ignorer le fichier .env
 .env
-..
-.
-.git
-.gitignore
-Contact_manager_python.docx
-Python_bases.docx
-__pycache__
-contacts.db
-contacts.txt
-doc
-essai.py
-export_contacts.txt
-fichier
-script.ipynb
-contactApp.py
-contacts.py
+
+# Ignorer les répertoires
+__pycache__/
+doc/
+fichier/
+
+# Ignorer les fichiers spécifiques
+*.docx
+*.db
+*.txt
+
+# Ignorer les notebooks Jupyter
+*.ipynb
+
+# Ignorer les fichiers Python spécifiques
+*.pyc
+__pycache__/
+
+# Ne pas ignorer ce fichier .gitignore lui-même
+!.gitignore
