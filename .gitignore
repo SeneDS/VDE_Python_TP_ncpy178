@@ -1,6 +1,5 @@
 # Ignorer le fichier .env
 .env
-
 # Ignorer les répertoires
 __pycache__/
 doc/
